@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一様分布の和と中心への集まり</title>
+<style>
+  :root{
+    --bg:#f7f7fb;
+    --card:#ffffff;
+    --line:#d9dbe7;
+    --text:#1f2430;
+    --sub:#5b6475;
+    --accent:#2563eb;
+    --danger:#b91c1c;
+    --point:#2563eb;
+    --sum:#dc2626;
+    --axis:#374151;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.35;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:8px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 6px 18px rgba(20,20,40,0.05);margin-bottom:8px;}
+  h1{font-size:1.12rem;margin:0 0 2px;}
+  h2{font-size:0.95rem;margin:0 0 6px;}
+  p{margin:0.15rem 0;}
+  .sub,.note{color:var(--sub);font-size:0.82rem;}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  button{border:none;border-radius:10px;padding:7px 11px;font-size:0.84rem;cursor:pointer;background:#e9eefc;color:#16306b;font-weight:700;min-height:32px;}
+  button.primary{background:var(--accent);color:#fff;}
+  button.danger{background:var(--danger);color:#fff;}
+  button:disabled{opacity:0.55;cursor:default;}
+  .control{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:0.78rem;}
+  .switch{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:0.78rem;font-weight:700;}
+  .switch input{width:18px;height:18px;}
+  input[type="range"]{width:170px;}
+  .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .stat{padding:5px 7px;border:1px solid var(--line);border-radius:10px;background:#fcfcff;}
+  .stat .k{color:var(--sub);font-size:0.7rem;}
+  .stat .v{font-size:0.9rem;font-weight:800;margin-top:2px;}
+  svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);border-radius:12px;}
+  .below-stats{margin-top:4px;color:var(--sub);font-size:0.74rem;display:flex;gap:10px;flex-wrap:wrap;}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--sub);font-size:0.76rem;white-space:nowrap;}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:5px;vertical-align:-1px;}
+  .mono{font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>一様分布の和と中心への集まり</h1>
+    <p class="sub">それぞれ <span class="mono">-1</span> から <span class="mono">1</span> まで一様に分布する <span class="mono">X₁, X₂, …, Xₙ</span> を発生させ、その和 <span class="mono">S=X₁+X₂+…+Xₙ</span> を別の数直線上にプロットします。</p>
+  </div>
+
+  <div class="card">
+    <h2>操作</h2>
+    <div class="btns">
+      <button type="button" id="startBtn" class="primary">開始</button>
+      <button type="button" id="pauseBtn">一時停止</button>
+      <button type="button" id="stepBtn">1回行う</button>
+      <button type="button" id="resetBtn" class="danger">リセット</button>
+      <div class="control"><label for="varSlider">変数の個数 n</label><input type="range" id="varSlider" min="1" max="12" step="1" value="3"><span id="varValue" class="mono">3</span></div>
+      <div class="control"><label for="speedSlider">速度</label><input type="range" id="speedSlider" min="10" max="220" value="90" style="transform:scaleX(-1);"></div>
+      <div class="control"><label for="opacitySlider">点の濃さ</label><input type="range" id="opacitySlider" min="0.03" max="0.30" step="0.01" value="0.10"><span id="opacityValue" class="mono">0.10</span></div>
+      <label class="switch"><input type="checkbox" id="histToggle" checked>度数分布を表示</label>
+    </div>
+    <p class="note">個別の数直線は最大5本まで表示します。S は 0.01 刻みに丸めてから度数分布を作っています。和 <span class="mono">S</span> は変数の個数が増えるほど中央に集まり、正規分布に近い形になります。</p>
+  </div>
+
+  <div class="card">
+    <h2>現在の状況</h2>
+    <div class="stats-row">
+      <div class="stat"><div class="k">試行回数</div><div class="v mono" id="trialValue">0</div></div>
+      <div class="stat"><div class="k">変数の個数 n</div><div class="v mono" id="nValue">3</div></div>
+      <div class="stat"><div class="k">表示中の X</div><div class="v mono" id="shownValue">X₁〜X₃</div></div>
+      <div class="stat"><div class="k">直前の和 S</div><div class="v mono" id="lastSValue">–</div></div>
+      <div class="stat"><div class="k">S の実験平均</div><div class="v mono" id="meanSValue">–</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>数直線上のプロット</h2>
+    <svg id="plotChart" viewBox="0 0 980 610" aria-label="一様分布と和のプロット"></svg>
+    <div class="below-stats"><span>青：各変数 <span class="mono">Xᵢ</span></span><span>赤：和 <span class="mono">S=X₁+…+Xₙ</span></span><span>薄い棒：200階級の度数分布</span><span>個別表示：最大5本</span><span>和の範囲：<span class="mono">[-n,n]</span></span></div>
+  </div>
+
+  <div class="card"><div class="legend"><span><span class="dot" style="background:#2563eb"></span>Xᵢ</span><span><span class="dot" style="background:#dc2626"></span>S=X₁+…+Xₙ</span><span><span class="dot" style="background:#374151"></span>数直線</span></div></div>
+</div>
+
+<script>
+  let varCount = 3;
+  const maxShown = 5;
+  const maxVarCount = 12;
+  const BIN_WIDTH = 0.01;
+  const BIN_COUNT = 200;
+  let trialCount = 0;
+  let running = false;
+  let timer = null;
+  let SPEED_MS = 90;
+  let pointOpacity = 0.10;
+  let showHistogram = true;
+  let xs = Array.from({length:maxVarCount}, () => []);
+  let sums = [];
+  let lastValues = null;
+  let lastS = null;
+  const startBtn = document.getElementById("startBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const speedSlider = document.getElementById("speedSlider");
+  const opacitySlider = document.getElementById("opacitySlider");
+  const histToggle = document.getElementById("histToggle");
+  const varSlider = document.getElementById("varSlider");
+
+  function subscriptNumber(num){const map={"0":"₀","1":"₁","2":"₂","3":"₃","4":"₄","5":"₅","6":"₆","7":"₇","8":"₈","9":"₉"};return String(num).split("").map(ch=>map[ch]||ch).join("");}
+  function randUniform(){return Math.random()*2-1;}
+  function trialOnce(){const values=[];let s=0;for(let i=0;i<varCount;i++){const v=randUniform();values.push(v);s+=v;}s=Math.round(s*100)/100;for(let i=0;i<varCount;i++){xs[i].push(values[i]);}sums.push(s);lastValues=values;lastS=s;trialCount+=1;}
+  function startRunning(){SPEED_MS=Number(speedSlider.value);if(running)return;running=true;timer=setInterval(function(){trialOnce();updateAll();},SPEED_MS);updateButtons();}
+  function stopRunning(){running=false;if(timer!==null){clearInterval(timer);timer=null;}updateButtons();}
+  function resetAll(){stopRunning();trialCount=0;xs=Array.from({length:maxVarCount},()=>[]);sums=[];lastValues=null;lastS=null;updateAll();}
+  function updateButtons(){startBtn.disabled=running;pauseBtn.disabled=!running;}
+  function mean(arr){if(arr.length===0)return null;let s=0;for(const v of arr)s+=v;return s/arr.length;}
+  function line(x1,y1,x2,y2,color="#888",width=1,dash=""){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}"${dash?` stroke-dasharray="${dash}"`:""} />`;}
+  function text(x,y,str,size=14,color="#333",anchor="middle",weight=500){return `<text x="${x}" y="${y}" font-size="${size}" fill="${color}" text-anchor="${anchor}" font-weight="${weight}" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif">${str}</text>`;}
+  function circle(x,y,r,fill,opacity=1){return `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity="${opacity}" />`;}
+  function makeBins(values,min,max){const count=BIN_COUNT;const binWidth=(max-min)/count;const bins=Array(count).fill(0);for(const v of values){let idx=Math.floor((v-min)/binWidth);if(idx<0)idx=0;if(idx>=count)idx=count-1;bins[idx]+=1;}return bins;}
+  function renderHistogram(out,values,yAxis,min,max,xPos,color,heightMax){if(!showHistogram||values.length===0)return;const bins=makeBins(values,min,max);const maxBin=Math.max(...bins);if(maxBin<=0)return;const axisSpan=xPos(max)-xPos(min);const barW=Math.max(1,axisSpan/BIN_COUNT);const binWidth=(max-min)/bins.length;for(let i=0;i<bins.length;i++){const c=bins[i];if(c===0)continue;const center=min+(i+0.5)*binWidth;const x=xPos(center)-barW/2;const h=(c/maxBin)*heightMax;out.push(`<rect x="${x}" y="${yAxis-h}" width="${barW}" height="${h}" fill="${color}" opacity="0.28" stroke="none" />`);}}
+  function renderAxis(out,y,label,min,max,color){const W=980;const left=88;const right=32;const axisW=W-left-right;function xPos(v){return left+((v-min)/(max-min))*axisW;}out.push(text(42,y+5,label,15,color,"middle",800));out.push(line(left,y,left+axisW,y,"#374151",1.8));out.push(line(xPos(min),y-7,xPos(min),y+7,"#374151",1.6));out.push(line(xPos(0),y-9,xPos(0),y+9,"#374151",1.8));out.push(line(xPos(max),y-7,xPos(max),y+7,"#374151",1.6));out.push(text(xPos(min),y+23,String(min),12,"#374151","middle",700));out.push(text(xPos(0),y+23,"0",12,"#374151","middle",700));out.push(text(xPos(max),y+23,String(max),12,"#374151","middle",700));return xPos;}
+  function renderPlot(){const svg=document.getElementById("plotChart");const out=[];const visibleCount=Math.min(varCount,maxShown);const xStartY=54;const gap=72;const sumGap=102;const yS=xStartY+gap*(visibleCount-1)+sumGap;const H=yS+82;svg.setAttribute("viewBox",`0 0 980 ${H}`);out.push(`<rect x="0" y="0" width="980" height="${H}" fill="#ffffff" />`);const xPositions=[];for(let i=0;i<visibleCount;i++){const y=xStartY+gap*i;const label="X"+subscriptNumber(i+1);const xPos=renderAxis(out,y,label,-1,1,"#2563eb");xPositions.push(xPos);renderHistogram(out,xs[i],y,-1,1,xPos,"#2563eb",40);}const xPosS=renderAxis(out,yS,"S",-varCount,varCount,"#dc2626");renderHistogram(out,sums,yS,-varCount,varCount,xPosS,"#dc2626",72);for(let row=0;row<visibleCount;row++){const y=xStartY+gap*row;const values=xs[row];const xPos=xPositions[row];for(let i=0;i<values.length;i++){out.push(circle(xPos(values[i]),y,3.1,"#2563eb",pointOpacity));}}for(let i=0;i<sums.length;i++){out.push(circle(xPosS(sums[i]),yS,3.1,"#dc2626",pointOpacity));}if(lastValues!==null){for(let row=0;row<visibleCount;row++){const y=xStartY+gap*row;out.push(circle(xPositions[row](lastValues[row]),y,5.3,"#1d4ed8",0.95));}out.push(circle(xPosS(lastS),yS,5.8,"#b91c1c",0.95));}if(varCount>maxShown){out.push(text(500,xStartY+gap*visibleCount-14,`※ 個別表示は X₁〜X₅ まで。和 S は ${varCount} 個すべてを合計。`,12,"#5b6475","middle",700));}svg.innerHTML=out.join("");}
+  function updateStats(){document.getElementById("trialValue").textContent=String(trialCount);document.getElementById("nValue").textContent=String(varCount);document.getElementById("varValue").textContent=String(varCount);const visibleCount=Math.min(varCount,maxShown);document.getElementById("shownValue").textContent=visibleCount===1?"X₁":`X₁〜X${subscriptNumber(visibleCount)}`;document.getElementById("lastSValue").textContent=lastS===null?"–":lastS.toFixed(3);const m=mean(sums);document.getElementById("meanSValue").textContent=m===null?"–":m.toFixed(4);document.getElementById("opacityValue").textContent=pointOpacity.toFixed(2);}
+  function updateAll(){updateStats();renderPlot();}
+  startBtn.addEventListener("click",startRunning);pauseBtn.addEventListener("click",stopRunning);stepBtn.addEventListener("click",function(){stopRunning();trialOnce();updateAll();});resetBtn.addEventListener("click",resetAll);speedSlider.addEventListener("input",function(){SPEED_MS=Number(this.value);if(running){stopRunning();startRunning();}});opacitySlider.addEventListener("input",function(){pointOpacity=Number(this.value);updateAll();});histToggle.addEventListener("change",function(){showHistogram=this.checked;updateAll();});varSlider.addEventListener("input",function(){varCount=Number(this.value);resetAll();});updateButtons();updateAll();
+</script>
+</body>
+</html>
