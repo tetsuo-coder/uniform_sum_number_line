@@ -169,8 +169,11 @@
   }
 
   function randUniform(){
-    const idx = Math.floor(Math.random() * 201); // -1, -0.99, ..., 1.00
-    return -1 + idx * X_STEP;
+    // 200階級の中央の値を発生させる。
+    // 例：-0.995, -0.985, ..., 0.985, 0.995
+    // これにより、乱数値とヒストグラムの階級がずれない。
+    const idx = Math.floor(Math.random() * BIN_COUNT);
+    return -1 + (idx + 0.5) * X_STEP;
   }
 
   function roundToStep(value, step){
@@ -186,7 +189,11 @@
       s+=v;
     }
     const sStep = (2 * varCount) / BIN_COUNT;
-    s = roundToStep(s, sStep);
+    // S も [-n,n] を200等分した階級の中央にそろえる。
+    let sIdx = Math.floor((s + varCount) / sStep);
+    if(sIdx < 0) sIdx = 0;
+    if(sIdx >= BIN_COUNT) sIdx = BIN_COUNT - 1;
+    s = -varCount + (sIdx + 0.5) * sStep;
 
     for(let i=0;i<varCount;i++){
       xs[i].push(values[i]);
